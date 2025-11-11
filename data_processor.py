@@ -86,6 +86,10 @@ def extract_dimensions(campaign_name: str) -> Dict:
     else:
         attribute = '未分类'
 
+    # 确保属性不是空值
+    if not attribute or attribute.strip() == '':
+        attribute = '未分类'
+
     # 判断是否有效（至少提取了一个维度）
     is_valid = (
         parent_code != '未分类' or
@@ -140,6 +144,12 @@ def extract_all_dimensions(df: pd.DataFrame) -> pd.DataFrame:
         for col in ['parent_code', 'pattern', 'attribute', 'is_valid']:
             if col not in df.columns:
                 df[col] = pd.Series(dtype='object')
+    else:
+        # 确保维度列中没有空值，用"未分类"替换
+        for col in ['parent_code', 'pattern', 'attribute']:
+            if col in df.columns:
+                df[col] = df[col].fillna('未分类')
+                df[col] = df[col].replace('', '未分类')
 
     return df
 
