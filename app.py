@@ -17,7 +17,8 @@ from pathlib import Path
 from data_processor import (
     extract_all_dimensions,
     validate_excel,
-    get_dimension_summary
+    get_dimension_summary,
+    aggregate_single
 )
 
 # ============================================================================
@@ -267,6 +268,77 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
             use_container_width=True,
             hide_index=True
         )
+
+    # ========================================================================
+    # Step 2：单维度分析
+    # ========================================================================
+
+    st.markdown("---")
+    st.markdown("## 📊 Step 2：单维度分析")
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        dimension = st.selectbox(
+            "选择要分析的维度",
+            options=["parent_code", "pattern", "attribute"],
+            format_func=lambda x: {
+                "parent_code": "📍 Parent Code",
+                "pattern": "🎨 图案",
+                "attribute": "🏷️ 属性"
+            }[x]
+        )
+
+    with col2:
+        st.write("")  # 占位符用于对齐
+        analyze_button = st.button("🔍 分析", key="step2_analyze", use_container_width=True)
+
+    if analyze_button:
+        try:
+            with st.spinner(f"⏳ 正在按 {['Parent Code', '图案', '属性'][['parent_code', 'pattern', 'attribute'].index(dimension)]} 进行聚合分析..."):
+                result = aggregate_single(df_extracted, dimension)
+
+                # 按花费降序排列
+                if '花费' in result.columns:
+                    result = result.sort_values(by='花费', ascending=False, na_position='last').reset_index(drop=True)
+
+            st.success("✅ 分析完成")
+
+            # 显示结果表格
+            st.dataframe(
+                result,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            # 显示摘要统计
+            st.markdown("#### 📈 汇总统计")
+            summary_col1, summary_col2, summary_col3 = st.columns(3)
+
+            with summary_col1:
+                st.metric(
+                    label="维度值个数",
+                    value=len(result)
+                )
+
+            with summary_col2:
+                if '数据行数' in result.columns:
+                    total_rows = result['数据行数'].sum()
+                    st.metric(
+                        label="总数据行数",
+                        value=int(total_rows)
+                    )
+
+            with summary_col3:
+                if '花费' in result.columns:
+                    total_spend = result['花费'].sum()
+                    st.metric(
+                        label="总花费",
+                        value=f"¥{total_spend:,.2f}"
+                    )
+
+        except Exception as e:
+            st.error(f"❌ 分析出错：{str(e)}")
 
     # ========================================================================
     # 底部说明
