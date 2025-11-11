@@ -248,35 +248,41 @@ def aggregate_single(df: pd.DataFrame, dimension: str) -> pd.DataFrame:
     result = result.merge(row_counts, on=dimension)
 
     # 计算比率列（需要重新计算）
-    # CTR = 点击 / 曝光量 * 100
+    # CTR = 点击 / 曝光量 * 100 (显示为百分比)
     if 'CTR' in existing_ratio_cols and '点击' in existing_sum_cols and '曝光量' in existing_sum_cols:
-        result['CTR'] = (result['点击'] / result['曝光量'] * 100).round(2)
-        result['CTR'] = result['CTR'].replace([np.inf, -np.inf], np.nan)
+        ctr_values = (result['点击'] / result['曝光量'] * 100).round(2)
+        ctr_values = ctr_values.replace([np.inf, -np.inf], np.nan)
+        result['CTR'] = ctr_values.apply(lambda x: f"{x}%" if pd.notna(x) else "")
 
-    # CPC = 花费 / 点击
+    # CPC = 花费 / 点击 (显示为¥)
     if 'CPC' in existing_ratio_cols and '花费' in existing_sum_cols and '点击' in existing_sum_cols:
-        result['CPC'] = (result['花费'] / result['点击']).round(2)
-        result['CPC'] = result['CPC'].replace([np.inf, -np.inf], np.nan)
+        cpc_values = (result['花费'] / result['点击']).round(2)
+        cpc_values = cpc_values.replace([np.inf, -np.inf], np.nan)
+        result['CPC'] = cpc_values.apply(lambda x: f"¥{x}" if pd.notna(x) else "")
 
-    # ROAS = 销售额 / 花费
+    # ROAS = 销售额 / 花费 (显示为倍数)
     if 'ROAS' in existing_ratio_cols and '销售额' in existing_sum_cols and '花费' in existing_sum_cols:
-        result['ROAS'] = (result['销售额'] / result['花费']).round(2)
-        result['ROAS'] = result['ROAS'].replace([np.inf, -np.inf], np.nan)
+        roas_values = (result['销售额'] / result['花费']).round(2)
+        roas_values = roas_values.replace([np.inf, -np.inf], np.nan)
+        result['ROAS'] = roas_values.apply(lambda x: f"{x}x" if pd.notna(x) else "")
 
-    # ACoS = 花费 / 销售额 * 100
+    # ACoS = 花费 / 销售额 * 100 (显示为百分比)
     if 'ACoS' in existing_ratio_cols and '花费' in existing_sum_cols and '销售额' in existing_sum_cols:
-        result['ACoS'] = (result['花费'] / result['销售额'] * 100).round(2)
-        result['ACoS'] = result['ACoS'].replace([np.inf, -np.inf], np.nan)
+        acos_values = (result['花费'] / result['销售额'] * 100).round(2)
+        acos_values = acos_values.replace([np.inf, -np.inf], np.nan)
+        result['ACoS'] = acos_values.apply(lambda x: f"{x}%" if pd.notna(x) else "")
 
-    # CVR = 直接成交订单 / 点击 * 100
+    # CVR = 直接成交订单 / 点击 * 100 (显示为百分比)
     if 'CVR' in existing_ratio_cols and '直接成交订单' in existing_sum_cols and '点击' in existing_sum_cols:
-        result['CVR'] = (result['直接成交订单'] / result['点击'] * 100).round(2)
-        result['CVR'] = result['CVR'].replace([np.inf, -np.inf], np.nan)
+        cvr_values = (result['直接成交订单'] / result['点击'] * 100).round(2)
+        cvr_values = cvr_values.replace([np.inf, -np.inf], np.nan)
+        result['CVR'] = cvr_values.apply(lambda x: f"{x}%" if pd.notna(x) else "")
 
-    # CPA = 花费 / 直接成交订单
+    # CPA = 花费 / 直接成交订单 (显示为¥)
     if 'CPA' in existing_ratio_cols and '花费' in existing_sum_cols and '直接成交订单' in existing_sum_cols:
-        result['CPA'] = (result['花费'] / result['直接成交订单']).round(2)
-        result['CPA'] = result['CPA'].replace([np.inf, -np.inf], np.nan)
+        cpa_values = (result['花费'] / result['直接成交订单']).round(2)
+        cpa_values = cpa_values.replace([np.inf, -np.inf], np.nan)
+        result['CPA'] = cpa_values.apply(lambda x: f"¥{x}" if pd.notna(x) else "")
 
     # 重新排列列顺序：维度 -> 数据行数 -> 其他指标
     # 按照原始顺序排列所有列
