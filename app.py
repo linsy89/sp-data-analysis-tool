@@ -14,12 +14,48 @@ SP广告数据分析工具 - Streamlit Web应用
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+import pickle
+import os
 from data_processor import (
     extract_all_dimensions,
     validate_excel,
     get_dimension_summary,
     aggregate_single
 )
+
+# ============================================================================
+# 数据缓存配置
+# ============================================================================
+
+CACHE_DIR = Path(".streamlit_cache")
+CACHE_DIR.mkdir(exist_ok=True)
+CACHE_FILE = CACHE_DIR / "df_extracted.pkl"
+
+def save_df_cache(df):
+    """保存提取后的数据到文件"""
+    try:
+        with open(CACHE_FILE, 'wb') as f:
+            pickle.dump(df, f)
+    except Exception as e:
+        st.warning(f"⚠️ 数据缓存保存失败: {str(e)}")
+
+def load_df_cache():
+    """从文件加载提取后的数据"""
+    try:
+        if CACHE_FILE.exists():
+            with open(CACHE_FILE, 'rb') as f:
+                return pickle.load(f)
+    except Exception as e:
+        st.warning(f"⚠️ 数据缓存加载失败: {str(e)}")
+    return None
+
+def clear_df_cache():
+    """清除缓存文件"""
+    try:
+        if CACHE_FILE.exists():
+            CACHE_FILE.unlink()
+    except Exception as e:
+        st.warning(f"⚠️ 缓存清除失败: {str(e)}")
 
 # ============================================================================
 # 页面配置
@@ -58,14 +94,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# 初始化Session State
+# 初始化Session State（从缓存加载）
 # ============================================================================
 
 if 'df' not in st.session_state:
     st.session_state.df = None
-    st.session_state.df_extracted = None
-    st.session_state.summary = None
     st.session_state.file_name = None
+
+    # 尝试从缓存加载数据
+    cached_df = load_df_cache()
+    if cached_df is not None:
+        st.session_state.df_extracted = cached_df
+        st.session_state.summary = get_dimension_summary(cached_df)
+    else:
+        st.session_state.df_extracted = None
+        st.session_state.summary = None
 
 # ============================================================================
 # 页面路由 - 检查是否为详情页
@@ -212,6 +255,9 @@ with st.sidebar:
                         df_extracted = extract_all_dimensions(df)
                         st.session_state.df_extracted = df_extracted
                         st.session_state.summary = get_dimension_summary(df_extracted)
+
+                        # 保存到缓存文件，以便详情页可以访问
+                        save_df_cache(df_extracted)
 
                     st.success("✅ 维度提取完成")
             else:
