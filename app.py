@@ -451,21 +451,35 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
 
             st.success("✅ 分析完成")
 
-            # 生成可点击的结果表格（维度列添加链接）
-            result_display = result.copy()
-            dimension_col = result_display.columns[0]  # 第一列是维度列
+            # 显示结果表格
+            st.dataframe(
+                result,
+                use_container_width=True,
+                hide_index=True
+            )
 
-            # 创建链接HTML - 使用 JavaScript 在同一窗口打开
-            def create_detail_link(value):
-                """创建跳转链接，在同一窗口打开详情页"""
-                # 使用 onclick 事件替代 href，确保在同一窗口导航
-                return f'<a onclick="const url = new URL(window.location); url.searchParams.set(\'dimension\', \'{dimension}\'); url.searchParams.set(\'value\', \'{value}\'); window.location = url.toString(); return false;" style="color: #1f77b4; text-decoration: underline; cursor: pointer;">{value}</a>'
+            # 添加查看详情的按钮
+            st.markdown("---")
+            st.markdown("### 📍 查看详情")
 
-            result_display[dimension_col] = result_display[dimension_col].apply(create_detail_link)
+            dimension_col = result.columns[0]
+            dimension_values = result[dimension_col].tolist()
 
-            # 使用HTML渲染表格
-            html_table = result_display.to_html(escape=False, index=False)
-            st.markdown(html_table, unsafe_allow_html=True)
+            # 按4列布局显示按钮
+            cols_per_row = 4
+            for i in range(0, len(dimension_values), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for j, col in enumerate(cols):
+                    if i + j < len(dimension_values):
+                        value = dimension_values[i + j]
+                        with col:
+                            # 使用 link_button 打开详情页，带上查询参数
+                            detail_url = f"?dimension={dimension}&value={value}"
+                            st.link_button(
+                                f"📊 {value}",
+                                detail_url,
+                                use_container_width=True
+                            )
 
             # 显示摘要统计
             st.markdown("#### 📈 汇总统计")
