@@ -67,6 +67,107 @@ if 'df' not in st.session_state:
     st.session_state.summary = None
     st.session_state.file_name = None
 
+# ============================================================================
+# 页面路由 - 检查是否为详情页
+# ============================================================================
+
+def show_detail_page():
+    """显示维度值详情页"""
+    # 获取URL参数
+    dimension = st.query_params.get('dimension', '')
+    value = st.query_params.get('value', '')
+
+    if not dimension or not value:
+        st.error("❌ 无效的详情页链接")
+        return
+
+    # 维度显示名称
+    dimension_names = {
+        'parent_code': 'Parent Code',
+        'pattern': '图案',
+        'attribute': '属性'
+    }
+
+    df_extracted = st.session_state.df_extracted
+
+    # 返回按钮
+    col1, col2 = st.columns([1, 9])
+    with col1:
+        if st.button("← 返回分析"):
+            st.query_params.clear()
+            st.rerun()
+
+    # 标题
+    st.markdown(f"## 📊 {dimension_names.get(dimension, dimension)}详情：{value}")
+    st.markdown("---")
+
+    # 1. 汇总统计
+    st.markdown("### 📈 汇总统计")
+    try:
+        aggregated = aggregate_single(df_extracted, dimension)
+        single_row = aggregated[aggregated[dimension] == value]
+
+        if len(single_row) > 0:
+            # 显示汇总数据
+            st.dataframe(
+                single_row,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            # 显示关键指标
+            metric_col1, metric_col2, metric_col3 = st.columns(3)
+            with metric_col1:
+                if '数据行数' in single_row.columns:
+                    st.metric("数据行数", int(single_row['数据行数'].iloc[0]))
+            with metric_col2:
+                if '花费' in single_row.columns:
+                    st.metric("总花费", f"¥{single_row['花费'].iloc[0]:,.2f}")
+            with metric_col3:
+                if '销售额' in single_row.columns:
+                    st.metric("总销售额", f"¥{single_row['销售额'].iloc[0]:,.2f}")
+        else:
+            st.warning(f"⚠️ 未找到 {dimension_names.get(dimension, dimension)} = '{value}' 的数据")
+            return
+
+    except Exception as e:
+        st.error(f"❌ 汇总统计出错：{str(e)}")
+        return
+
+    # 2. 明细数据
+    st.markdown("---")
+    st.markdown("### 📋 明细数据")
+
+    try:
+        detail_data = df_extracted[df_extracted[dimension] == value].copy()
+
+        if len(detail_data) > 0:
+            # 重命名列以更好的显示
+            display_cols = [col for col in detail_data.columns if col not in ['is_valid']]
+            detail_display = detail_data[display_cols].copy()
+
+            st.dataframe(
+                detail_display,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            st.info(f"📊 共 {len(detail_data)} 行数据")
+        else:
+            st.warning(f"⚠️ 未找到明细数据")
+
+    except Exception as e:
+        st.error(f"❌ 明细数据加载出错：{str(e)}")
+
+
+# 检查是否为详情页请求
+if 'dimension' in st.query_params and 'value' in st.query_params:
+    if st.session_state.df_extracted is not None:
+        show_detail_page()
+        st.stop()
+    else:
+        st.error("❌ 请先上传数据文件")
+
 
 # ============================================================================
 # 侧边栏 - 文件上传
@@ -304,12 +405,20 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
 
             st.success("✅ 分析完成")
 
-            # 显示结果表格
-            st.dataframe(
-                result,
-                use_container_width=True,
-                hide_index=True
-            )
+            # 生成可点击的结果表格（维度列添加链接）
+            result_display = result.copy()
+            dimension_col = result_display.columns[0]  # 第一列是维度列
+
+            # 创建链接HTML
+            def create_detail_link(value):
+                """创建跳转链接，在新窗口打开详情页"""
+                return f'<a href="?dimension={dimension}&value={value}" target="_blank" style="color: #1f77b4; text-decoration: underline;">{value}</a>'
+
+            result_display[dimension_col] = result_display[dimension_col].apply(create_detail_link)
+
+            # 使用HTML渲染表格
+            html_table = result_display.to_html(escape=False, index=False)
+            st.markdown(html_table, unsafe_allow_html=True)
 
             # 显示摘要统计
             st.markdown("#### 📈 汇总统计")
