@@ -451,35 +451,20 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
 
             st.success("✅ 分析完成")
 
-            # 显示结果表格
-            st.dataframe(
-                result,
-                use_container_width=True,
-                hide_index=True
-            )
+            # 显示结果表格（第一列为超链接）
+            result_display = result.copy()
+            dimension_col = result_display.columns[0]
 
-            # 添加查看详情的按钮
-            st.markdown("---")
-            st.markdown("### 📍 查看详情")
+            # 为第一列添加超链接
+            def create_detail_link(value):
+                url = f"?dimension={dimension}&value={value}"
+                return f'<a href="{url}" target="_blank" style="color: #1f77b4; text-decoration: underline;">{value}</a>'
 
-            dimension_col = result.columns[0]
-            dimension_values = result[dimension_col].tolist()
+            result_display[dimension_col] = result_display[dimension_col].apply(create_detail_link)
 
-            # 按4列布局显示按钮
-            cols_per_row = 4
-            for i in range(0, len(dimension_values), cols_per_row):
-                cols = st.columns(cols_per_row)
-                for j, col in enumerate(cols):
-                    if i + j < len(dimension_values):
-                        value = dimension_values[i + j]
-                        with col:
-                            # 使用 link_button 打开详情页，带上查询参数
-                            detail_url = f"?dimension={dimension}&value={value}"
-                            st.link_button(
-                                f"📊 {value}",
-                                detail_url,
-                                use_container_width=True
-                            )
+            # 使用 HTML 渲染表格
+            html_table = result_display.to_html(escape=False, index=False)
+            st.markdown(html_table, unsafe_allow_html=True)
 
             # 显示摘要统计
             st.markdown("#### 📈 汇总统计")
