@@ -405,39 +405,21 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
 
             st.success("✅ 分析完成")
 
-            # 显示结果表格（带链接到详情页）
-            st.dataframe(
-                result,
-                use_container_width=True,
-                hide_index=True
-            )
+            # 生成可点击的结果表格（维度列添加链接）
+            result_display = result.copy()
+            dimension_col = result_display.columns[0]  # 第一列是维度列
 
-            # 在表格下方显示维度值链接供用户点击查看详情
-            st.markdown("---")
-            st.markdown("### 📍 查看详情")
-            st.markdown("点击下方链接查看各维度值的详细数据：")
+            # 创建链接HTML - 使用 JavaScript 在同一窗口打开
+            def create_detail_link(value):
+                """创建跳转链接，在同一窗口打开详情页"""
+                # 使用 onclick 事件替代 href，确保在同一窗口导航
+                return f'<a onclick="const url = new URL(window.location); url.searchParams.set(\'dimension\', \'{dimension}\'); url.searchParams.set(\'value\', \'{value}\'); window.location = url.toString(); return false;" style="color: #1f77b4; text-decoration: underline; cursor: pointer;">{value}</a>'
 
-            # 创建两列布局显示链接
-            cols_per_row = 4
-            dimension_col = result.columns[0]
-            dimension_values = result[dimension_col].tolist()
+            result_display[dimension_col] = result_display[dimension_col].apply(create_detail_link)
 
-            # 分组显示链接
-            for i in range(0, len(dimension_values), cols_per_row):
-                cols = st.columns(cols_per_row)
-                for j, col in enumerate(cols):
-                    if i + j < len(dimension_values):
-                        value = dimension_values[i + j]
-                        with col:
-                            if st.button(
-                                f"📊 {value}",
-                                key=f"detail_{dimension}_{value}_{i}_{j}",
-                                use_container_width=True
-                            ):
-                                # 点击按钮时设置URL参数并重新运行
-                                st.query_params['dimension'] = dimension
-                                st.query_params['value'] = str(value)
-                                st.rerun()
+            # 使用HTML渲染表格
+            html_table = result_display.to_html(escape=False, index=False)
+            st.markdown(html_table, unsafe_allow_html=True)
 
             # 显示摘要统计
             st.markdown("#### 📈 汇总统计")
