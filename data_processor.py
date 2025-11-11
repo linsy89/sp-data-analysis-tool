@@ -218,39 +218,71 @@ def aggregate_single(df: pd.DataFrame, dimension: str) -> pd.DataFrame:
     if dimension not in df.columns:
         raise ValueError(f"DataFrame中不存在列'{dimension}'")
 
-    # 数值列列表（聚合指标）
-    numeric_cols = [
-        '花费', '销售额', '直接成交销售额', '广告订单', '直接成交订单',
-        '曝光量', '点击', 'CPC', 'CTR', 'ACoS', 'ROAS',
-        'CPA', 'CVR', '广告笔单价', '广告销量'
-    ]
-
-    # 过滤存在的列（因为不是所有列都一定存在）
-    existing_numeric_cols = [col for col in numeric_cols if col in df.columns]
-
     # 为了避免文本值导致的错误，先转换为数值类型（非数值的会变成NaN）
     df_copy = df.copy()
-    for col in existing_numeric_cols:
+
+    # 需要求和的列
+    sum_cols = [
+        '花费', '销售额', '直接成交销售额', '广告订单', '直接成交订单',
+        '曝光量', '点击', '广告笔单价', '广告销量'
+    ]
+
+    # 需要计算的比率列（不能直接求和）
+    ratio_cols = ['CPC', 'CTR', 'ACoS', 'ROAS', 'CPA', 'CVR']
+
+    # 只保留数据框中存在的列
+    existing_sum_cols = [col for col in sum_cols if col in df_copy.columns]
+    existing_ratio_cols = [col for col in ratio_cols if col in df_copy.columns]
+
+    # 转换为数值类型
+    for col in existing_sum_cols + existing_ratio_cols:
         df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce')
 
-    # 按维度分组，计算数据行数和各数值列的和
-    agg_dict = {col: 'sum' for col in existing_numeric_cols}
+    # 按维度分组，计算求和列
+    agg_dict = {col: 'sum' for col in existing_sum_cols}
     result = df_copy.groupby(dimension, as_index=False).agg(agg_dict)
 
     # 添加"数据行数"列
     row_counts = df_copy.groupby(dimension, as_index=False).size()
     row_counts.rename(columns={'size': '数据行数'}, inplace=True)
-
     result = result.merge(row_counts, on=dimension)
 
-    # 重新排列列顺序：维度 -> 数据行数 -> 其他指标
-    cols = [dimension, '数据行数'] + existing_numeric_cols
-    result = result[cols]
+    # 计算比率列（需要重新计算）
+    # CTR = 点击 / 曝光量 * 100
+    if 'CTR' in existing_ratio_cols and '点击' in existing_sum_cols and '曝光量' in existing_sum_cols:
+        result['CTR'] = (result['点击'] / result['曝光量'] * 100).round(2)
+        result['CTR'] = result['CTR'].replace([np.inf, -np.inf], np.nan)
 
-    # 四舍五入到2位小数
-    for col in existing_numeric_cols:
-        if col in result.columns:
-            result[col] = result[col].round(2)
+    # CPC = 花费 / 点击
+    if 'CPC' in existing_ratio_cols and '花费' in existing_sum_cols and '点击' in existing_sum_cols:
+        result['CPC'] = (result['花费'] / result['点击']).round(2)
+        result['CPC'] = result['CPC'].replace([np.inf, -np.inf], np.nan)
+
+    # ROAS = 销售额 / 花费
+    if 'ROAS' in existing_ratio_cols and '销售额' in existing_sum_cols and '花费' in existing_sum_cols:
+        result['ROAS'] = (result['销售额'] / result['花费']).round(2)
+        result['ROAS'] = result['ROAS'].replace([np.inf, -np.inf], np.nan)
+
+    # ACoS = 花费 / 销售额 * 100
+    if 'ACoS' in existing_ratio_cols and '花费' in existing_sum_cols and '销售额' in existing_sum_cols:
+        result['ACoS'] = (result['花费'] / result['销售额'] * 100).round(2)
+        result['ACoS'] = result['ACoS'].replace([np.inf, -np.inf], np.nan)
+
+    # CVR = 直接成交订单 / 点击 * 100
+    if 'CVR' in existing_ratio_cols and '直接成交订单' in existing_sum_cols and '点击' in existing_sum_cols:
+        result['CVR'] = (result['直接成交订单'] / result['点击'] * 100).round(2)
+        result['CVR'] = result['CVR'].replace([np.inf, -np.inf], np.nan)
+
+    # CPA = 花费 / 直接成交订单
+    if 'CPA' in existing_ratio_cols and '花费' in existing_sum_cols and '直接成交订单' in existing_sum_cols:
+        result['CPA'] = (result['花费'] / result['直接成交订单']).round(2)
+        result['CPA'] = result['CPA'].replace([np.inf, -np.inf], np.nan)
+
+    # 重新排列列顺序：维度 -> 数据行数 -> 其他指标
+    # 按照原始顺序排列所有列
+    all_numeric_cols = existing_sum_cols + existing_ratio_cols
+    cols = [dimension, '数据行数'] + all_numeric_cols
+    result = result[[col for col in cols if col in result.columns]]
 
     return result
 
