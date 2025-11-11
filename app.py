@@ -409,10 +409,10 @@ if st.session_state.df is not None and st.session_state.df_extracted is not None
             result_display = result.copy()
             dimension_col = result_display.columns[0]  # 第一列是维度列
 
-            # 创建链接HTML
+            # 创建链接HTML - 在同一窗口打开详情页
             def create_detail_link(value):
-                """创建跳转链接，在新窗口打开详情页"""
-                return f'<a href="?dimension={dimension}&value={value}" target="_blank" style="color: #1f77b4; text-decoration: underline;">{value}</a>'
+                """创建跳转链接，在同一窗口打开详情页"""
+                return f'<a href="?dimension={dimension}&value={value}" style="color: #1f77b4; text-decoration: underline; cursor: pointer;">{value}</a>'
 
             result_display[dimension_col] = result_display[dimension_col].apply(create_detail_link)
 
