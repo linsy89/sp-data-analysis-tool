@@ -245,7 +245,9 @@ if uploaded_file is not None:
 
                     # 生成 HTML 表格，第一列为超链接
                     def make_clickable(value):
-                        return f'<a href="?dimension={dimension}&value={value}" target="_blank">{value}</a>'
+                        # 确保 value 是字符串类型
+                        value_str = str(value)
+                        return f'<a href="?dimension={dimension}&value={value_str}" target="_blank">{value_str}</a>'
 
                     df_display[dimension_col] = df_display[dimension_col].apply(make_clickable)
 
