@@ -152,12 +152,9 @@ def aggregate_single(df: pd.DataFrame, dimension: str) -> pd.DataFrame:
     if dimension not in ['Parent Code', 'Pattern', 'Attribute']:
         raise ValueError(f"无效的维度: {dimension}")
 
-    # 需要求和的列（排除文本列和维度列）
-    exclude_columns = ['Campaign Name', '广告活动', 'Parent Code', 'Pattern', 'Attribute']
-    sum_columns = {
-        col: 'sum' for col in df.columns
-        if col not in exclude_columns
-    }
+    # 让类型系统告诉我们哪些列可以聚合 - 消除特殊情况
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    sum_columns = {col: 'sum' for col in numeric_cols}
 
     # 执行分组和求和
     result = df.groupby(dimension).agg(sum_columns).reset_index()
@@ -262,12 +259,9 @@ def aggregate_cross(df: pd.DataFrame, dim1: str, dim2: str) -> pd.DataFrame:
     if dim1 == dim2:
         raise ValueError("两个维度不能相同")
 
-    # 需要求和的列（排除文本列和维度列）
-    exclude_columns = ['Campaign Name', '广告活动', 'Parent Code', 'Pattern', 'Attribute']
-    sum_columns = {
-        col: 'sum' for col in df.columns
-        if col not in exclude_columns
-    }
+    # 让类型系统告诉我们哪些列可以聚合 - 消除特殊情况
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    sum_columns = {col: 'sum' for col in numeric_cols}
 
     # 执行分组和求和
     result = df.groupby([dim1, dim2]).agg(sum_columns).reset_index()
