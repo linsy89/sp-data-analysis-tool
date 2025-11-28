@@ -239,6 +239,16 @@ if uploaded_file is not None:
                     # 显示结果表格
                     st.markdown(f"#### {dimension} 分析结果")
 
+                    # 默认按花费降序排序
+                    spend_col = None
+                    for col_name in ['Spend', 'Spend ($)', '花费', '支出']:
+                        if col_name in result.columns:
+                            spend_col = col_name
+                            break
+
+                    if spend_col:
+                        result = result.sort_values(by=spend_col, ascending=False)
+
                     # 【重要】转换为 HTML 表格，在第一列显示超链接
                     df_display = result.copy()
                     dimension_col = df_display.columns[0]
