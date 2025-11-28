@@ -124,6 +124,10 @@ def format_value(value: float, metric_type: str) -> str:
     except (ValueError, TypeError):
         return "-"
 
+    # 处理无穷大 - 花费有值但销售额为0的情况
+    if np.isinf(value):
+        return "∞"
+
     if metric_type == 'percent':
         return f"{value:.2f}%"
     elif metric_type == 'currency':
