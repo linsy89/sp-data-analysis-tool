@@ -63,21 +63,26 @@ def extract_all_dimensions(df: pd.DataFrame) -> pd.DataFrame:
     为数据框添加三个维度列：Parent Code, Pattern, Attribute
 
     参数:
-        df: 原始数据框，应包含 Campaign Name 列
+        df: 原始数据框，应包含 Campaign Name 或 广告活动 列
 
     返回:
         包含新维度列的数据框
     """
     df_copy = df.copy()
 
-    # 确保 Campaign Name 列存在
-    if 'Campaign Name' not in df_copy.columns:
-        raise ValueError("数据框中未找到 'Campaign Name' 列")
+    # 确定广告活动列名（支持中英文）
+    campaign_col = None
+    if 'Campaign Name' in df_copy.columns:
+        campaign_col = 'Campaign Name'
+    elif '广告活动' in df_copy.columns:
+        campaign_col = '广告活动'
+    else:
+        raise ValueError("数据框中未找到 'Campaign Name' 或 '广告活动' 列")
 
     # 提取维度
-    df_copy['Parent Code'] = df_copy['Campaign Name'].apply(extract_parent_code)
-    df_copy['Pattern'] = df_copy['Campaign Name'].apply(extract_pattern)
-    df_copy['Attribute'] = df_copy['Campaign Name'].apply(extract_attribute)
+    df_copy['Parent Code'] = df_copy[campaign_col].apply(extract_parent_code)
+    df_copy['Pattern'] = df_copy[campaign_col].apply(extract_pattern)
+    df_copy['Attribute'] = df_copy[campaign_col].apply(extract_attribute)
 
     return df_copy
 
